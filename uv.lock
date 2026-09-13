@@ -219,24 +219,7 @@ wheels = [
 ]
 
 [[package]]
-name = "neuralcode"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "openai" },
-    { name = "pyyaml" },
-    { name = "rich" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "openai", specifier = ">=3.5.0" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "rich", specifier = ">=15.0.0" },
-]
-
-[[package]]
-name = "neuralcode"
+name = "nightfall-cli"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

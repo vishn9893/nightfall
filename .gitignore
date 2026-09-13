@@ -4,3 +4,7 @@ __pycache__/
 .venv/
 .env
 .envrc
+
+# Local planning and architecture notes
+docs/adr/
+docs/plans/
