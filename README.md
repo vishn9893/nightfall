@@ -4,8 +4,6 @@ A minimal coding agent harness in Python, built to show how the pieces of a codi
 
 This is the Nightfall CLI repository, a small coding-agent harness built from scratch.
 
-https://github.com/user-attachments/assets/e4aaa9e4-69ec-40e3-8f5a-e4ec8c5b7208
-
 ## Getting started
 
 Install the project with [uv](https://docs.astral.sh/uv/):

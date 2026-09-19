@@ -17,12 +17,15 @@ from rich.table import Table
 from rich.text import Text
 
 from . import prompt
+from .icon import render_agent_icon
 from .todos import MARKS
 
-ACCENT = "#7aa2f7"
-USER = "#9ece6a"
-TOOL = "#e0af68"
-MUTED = "#565f89"
+# Nightfall's dusk palette: low-brightness surfaces with only the important
+# state changes (agent, user, tools) receiving a restrained accent color.
+ACCENT = "#6978a8"
+USER = "#789b82"
+TOOL = "#a88663"
+MUTED = "#3f485c"
 
 MAX_TOOL_OUTPUT_LINES = 12
 
@@ -42,6 +45,7 @@ class UI:
 
     def banner(self, sandbox_name="none"):
         self.console.print()
+        self.console.print(Text.from_ansi(render_agent_icon()))
         self.console.print(
             Rule(Text(" coding agent ", style=f"bold {ACCENT}"), style=MUTED)
         )
