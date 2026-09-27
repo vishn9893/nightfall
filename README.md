@@ -38,6 +38,7 @@ is selected automatically for the host operating system.
 - Configurable model and OpenAI-compatible API endpoint.
 - Tool permissions and shell sandboxing on macOS, Linux, and Windows
 - Skills loaded from project and user `.agents/skills` directories.
+- Prompt autocomplete: `/` completes commands, `/skill:` completes skills, and `@` completes paths.
 - Subagents for exploring a codebase in a separate context window.
 - Todo tracking for tasks with multiple steps.
 - Saved chat sessions, with `/sessions` to reopen them and `/rewind` to go back in the conversation.
