@@ -3,6 +3,7 @@ import subprocess
 
 from . import history
 from . import sandbox
+from . import telemetry
 from .permissions import check
 from .subagent import TASK_SCHEMA, task
 from .skills import read_skill
@@ -57,9 +58,27 @@ def str_replace(path, old_str, new_str, allow_multi_edit=False):
 
 
 def execute(tool_call):
-    """Run one tool call through the permission layer.
+    """Run one tool call, traced, and hand back what the model gets to read."""
+    name = tool_call.function.name
 
-    Shared by the main loop and by subagents, so a subagent is fenced in by
+    # The span is around the call, not around the tool: a rejected or broken
+    # call is still a call, and still worth a line in the trace.
+    with telemetry.span(
+        "tool.call", **{"tool.name": name, "tool.call.id": tool_call.id or ""}
+    ) as call:
+        telemetry.count(telemetry.tool_calls, 1, {"tool": name})
+
+        args, result = _dispatch(tool_call)
+
+        call.set_attribute("nightfall.tool.result_chars", len(result))
+        if result.startswith("Error:"):
+            call.set_attribute("nightfall.tool.failed", True)
+            telemetry.count(telemetry.errors, 1, {"kind": "tool", "tool": name})
+        return args, result
+
+
+def _dispatch(tool_call):
+    """Shared by the main loop and by subagents, so a subagent is fenced in by
     exactly the same rules - it is not a way around them.
 
     A tool call is text the model wrote, so all of it is untrusted: the name

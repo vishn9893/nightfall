@@ -1,6 +1,6 @@
 [project]
 name = "nightfall-cli"
-version = "0.1.1"
+version = "0.1.2"
 description = "A minimal coding agent"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -9,6 +9,15 @@ dependencies = [
     "prompt-toolkit>=3.0.53",
     "pyyaml>=6.0.3",
     "rich>=15.0.0",
+]
+
+[project.optional-dependencies]
+# Tracing is off unless an exporter is configured, so the SDK is not something
+# everyone has to install: uv sync --extra otel
+otel = [
+    "opentelemetry-api>=1.27.0",
+    "opentelemetry-sdk>=1.27.0",
+    "opentelemetry-exporter-otlp>=1.27.0",
 ]
 
 [project.scripts]

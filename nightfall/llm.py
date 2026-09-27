@@ -4,6 +4,7 @@ import os
 from openai import OpenAI
 
 from . import config
+from . import telemetry
 from .skills import skills_prompt
 from .tools import TOOLS, TOOL_SCHEMAS
 
@@ -49,25 +50,62 @@ If a skill matches what the user wants, call read_skill first and follow it.
 
 
 def call_llm(messages, tools=None):
-    response = client.chat.completions.create(
-        model=config.MODEL,
-        messages=messages,
-        tools=tools or TOOL_SCHEMAS,
-    )
+    offered = tools or TOOL_SCHEMAS
 
-    message = response.choices[0].message
+    # Token counts and sizes only - never the prompt or the reply. See
+    # telemetry.py for why that is a rule and not an oversight.
+    with telemetry.span(
+        "llm.call",
+        **{
+            "gen_ai.system": "openai_compatible",
+            "gen_ai.request.model": config.MODEL,
+            "gen_ai.request.tool_count": len(offered),
+            "gen_ai.request.message_count": len(messages),
+        },
+    ) as call:
+        response = client.chat.completions.create(
+            model=config.MODEL,
+            messages=messages,
+            tools=offered,
+        )
 
-    completion_details = response.usage.completion_tokens_details
-    prompt_details = response.usage.prompt_tokens_details
+        message = response.choices[0].message
 
-    usage = {
-        "prompt_tokens": response.usage.prompt_tokens,
-        "completion_tokens": response.usage.completion_tokens,
-        "reasoning_tokens": getattr(completion_details, "reasoning_tokens", None),
-        "cached_tokens": getattr(prompt_details, "cached_tokens", None),
-    }
+        completion_details = response.usage.completion_tokens_details
+        prompt_details = response.usage.prompt_tokens_details
 
-    return message, usage
+        usage = {
+            "prompt_tokens": response.usage.prompt_tokens,
+            "completion_tokens": response.usage.completion_tokens,
+            "reasoning_tokens": getattr(completion_details, "reasoning_tokens", None),
+            "cached_tokens": getattr(prompt_details, "cached_tokens", None),
+        }
+
+        for choice in response.choices:
+            call.add_event(
+                "gen_ai.choice",
+                {
+                    "gen_ai.response.finish_reasons": choice.finish_reason or "",
+                    "gen_ai.response.tool_call_count": len(
+                        choice.message.tool_calls or []
+                    ),
+                },
+            )
+
+        for kind, key in (
+            ("input", "prompt_tokens"),
+            ("output", "completion_tokens"),
+            ("reasoning", "reasoning_tokens"),
+            ("cached", "cached_tokens"),
+        ):
+            telemetry.count(
+                telemetry.tokens, usage[key], {"model": config.MODEL, "kind": kind}
+            )
+
+        call.set_attribute("gen_ai.usage.input_tokens", usage["prompt_tokens"])
+        call.set_attribute("gen_ai.usage.output_tokens", usage["completion_tokens"])
+
+        return message, usage
 
 
 if __name__ == "__main__":

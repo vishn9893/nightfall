@@ -4,6 +4,7 @@ from . import commands
 from . import compact
 from . import history
 from . import session
+from . import telemetry
 from .context import reminder
 from .llm import SYSTEM_PROMPT, call_llm
 from . import sandbox
@@ -40,48 +41,53 @@ def main():
             continue
 
         messages.append({"role": "user", "content": user_input})
+        telemetry.count(telemetry.turns, 1, {"resumed": bool(cli.resume)})
 
-        while True:
-            injection = reminder()
-            ui.injection(injection["content"])
+        # One span per turn: the model calls and the tool calls hang off it, so
+        # a trace reads as the loop actually ran. Sizes only, never the prompt.
+        with telemetry.span("turn", **{"nightfall.turn.input_chars": len(user_input)}):
+            while True:
+                injection = reminder()
+                ui.injection(injection["content"])
 
-            if history.fit(messages):
-                ui.note("dropped old tool output to make this request fit")
+                if history.fit(messages):
+                    ui.note("dropped old tool output to make this request fit")
 
-            with ui.working(active_form()):
-                message, usage = call_llm(messages + [injection])
+                with ui.working(active_form()):
+                    message, usage = call_llm(messages + [injection])
 
-            messages.append(message.model_dump(exclude_none=True))
-            session.save(messages)
-            ui.usage(usage)
-
-            if cli.debug:
-                ui.debug(message.model_dump(exclude_none=True))
-
-            if message.content:
-                ui.agent(message.content)
-
-            if not message.tool_calls:
-                break
-
-            for tool_call in message.tool_calls:
-                args, result = execute(tool_call)
-                ui.tool(tool_call.function.name, args, result)
-
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": result,
-                })
+                messages.append(message.model_dump(exclude_none=True))
                 session.save(messages)
+                ui.usage(usage)
 
-        history.sweep()   # the turn is over: bin its temp files
-        history.strip(messages)  # ...and shrink the tool output it produced
+                if cli.debug:
+                    ui.debug(message.model_dump(exclude_none=True))
 
-        if compact.needed(usage):
-            messages = commands.compact(messages)
+                if message.content:
+                    ui.agent(message.content)
+
+                if not message.tool_calls:
+                    break
+
+                for tool_call in message.tool_calls:
+                    args, result = execute(tool_call)
+                    ui.tool(tool_call.function.name, args, result)
+
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": result,
+                    })
+                    session.save(messages)
+
+            history.sweep()   # the turn is over: bin its temp files
+            history.strip(messages)  # ...and shrink the tool output it produced
+
+            if compact.needed(usage):
+                messages = commands.compact(messages)
 
     ui.summary()
+    telemetry.shutdown()  # the batch processor holds the last spans until now
 
 
 if __name__ == "__main__":
