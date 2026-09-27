@@ -7,8 +7,11 @@ one module and every counter is also one module.
 
 import sys
 
+from .about import current
+
 PLATE = "\033[48;5;234m"  # #1E1E2E
 INK = "\033[38;5;252m"  # #C5C5C5
+MUTED = "\033[38;5;240m"  # a shade back, for the version
 RESET = "\033[0m"
 
 WORDMARK = "nf"
@@ -42,20 +45,33 @@ def _mark():
     return ["".join(line) for line in grid]
 
 
-def _plate(lines):
-    """Frame the mark on the plate and color it."""
-    blank = f"{PLATE}{' ' * (COLS * SCALE + 2)}{RESET}"
+def _plate(lines, version=None):
+    """Frame the mark on the plate and color it.
+
+    The plate is as wide as the mark, or as wide as the version if a two-digit
+    patch ever needs more room, so the version can never hang off the edge.
+    """
+    mark_width = COLS * SCALE
+    width = max(mark_width, len(version) if version else 0)
+    blank = f"{PLATE}{' ' * (width + 2)}{RESET}"
+
     rows = [blank]
     for line in lines:
         cells = "".join(" " if char == " " else f"{INK}█" for char in line)
-        rows.append(f"{PLATE} {cells} {RESET}")
+        rows.append(f"{PLATE} {cells}{' ' * (width - mark_width)} {RESET}")
+    if version:
+        # Right-aligned on the plate's own width, one shade back from the mark,
+        # so the number is there when you want it and quiet when you do not.
+        rows.append(
+            f"{PLATE}{' ' * (width - len(version) + 1)}{MUTED}{version}{RESET} {RESET}"
+        )
     rows.append(blank)
     return rows
 
 
-def render_agent_icon():
-    """Return the mark as an ANSI-colored string."""
-    return "\n".join([*_plate(_mark()), ""])
+def render_agent_icon(version=None):
+    """Return the mark as an ANSI-colored string, with the version under it."""
+    return "\n".join([*_plate(_mark(), current() if version is None else version), ""])
 
 
 def print_agent_icon():

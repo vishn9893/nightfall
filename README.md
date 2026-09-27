@@ -39,6 +39,8 @@ is selected automatically for the host operating system.
 - Tool permissions and shell sandboxing on macOS, Linux, and Windows
 - Skills loaded from project and user `.agents/skills` directories.
 - Prompt autocomplete: `/` completes commands, `/skill:` completes skills, and `@` completes paths.
+- Drag a file onto the terminal to drop its path into the prompt, however your terminal escapes it.
+- The banner shows the installed version.
 - Subagents for exploring a codebase in a separate context window.
 - Todo tracking for tasks with multiple steps.
 - Saved chat sessions, with `/sessions` to reopen them and `/rewind` to go back in the conversation.

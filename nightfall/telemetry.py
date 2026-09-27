@@ -83,12 +83,9 @@ def _load_env_file():
 
 
 def _version():
-    try:
-        from importlib.metadata import version
+    from .about import current
 
-        return version("nightfall-cli")
-    except Exception:  # noqa: BLE001 - running from a source tree without an install
-        return "0.0.0"
+    return current()
 
 
 def _setup():

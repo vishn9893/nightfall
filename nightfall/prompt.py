@@ -16,9 +16,10 @@ from prompt_toolkit.completion import Completer, Completion, ThreadedCompleter
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.keys import Keys
 from prompt_toolkit.styles import Style
 
-from . import autocomplete
+from . import autocomplete, file_drop
 
 HISTORY = Path.home() / ".agents" / "history"
 
@@ -72,6 +73,19 @@ def _word_right(event):
 def _newline(event):
     """Option-enter starts a new line instead of sending the message."""
     event.current_buffer.insert_text("\n")
+
+
+@bindings.add(Keys.BracketedPaste)
+def _paste(event):
+    """A dropped file arrives as a paste; anything else is a paste."""
+    data = event.data
+
+    # prompt_toolkit's own handler does this, and a terminal that pastes CRLF
+    # would otherwise put a stray \r in the buffer. Done here too because this
+    # binding replaces that one.
+    data = data.replace("\r\n", "\n").replace("\r", "\n")
+
+    event.current_buffer.insert_text(file_drop.normalize_dropped_paths(data) or data)
 
 
 class Autocomplete(Completer):
